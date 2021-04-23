@@ -134,6 +134,7 @@ class TableController extends Controller
             ];
         } catch (\Exception $ex) {
             $viewParams['error'] = $ex->getMessage();
+            return view('web.layout.sections.laravel.eloquent.crud_index', $viewParams);
         }
 
         return view('web.layout.sections.laravel.eloquent.crud_edit', $viewParams);
