@@ -175,7 +175,14 @@ class TableController extends Controller
                     }
                 } else {
                     if ($dir->getFilename() == $modelFileName) {
+                        // Found model by file name
                         return $dir->getRealPath();
+                    } else {
+                        // Get file content and search for $table property
+                        $contents = file_get_contents($dir->getRealPath());
+                        if (strpos($contents, "'".$table."'") !== false) {
+                            return $dir->getRealPath();
+                        }
                     }
                 }
             }
