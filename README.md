@@ -4,7 +4,13 @@ This is a laravel project to generate code for different tools, right now it onl
 Clone the repo, update your .env to connect to the database server.
 <ul>
 <li>
+Run: npm i
+</li>
+<li>
 Run: npm run prod
+</li>
+<li>
+Run: composer install
 </li>
 <li>Run: php artisan serve</li>
 </ul>
