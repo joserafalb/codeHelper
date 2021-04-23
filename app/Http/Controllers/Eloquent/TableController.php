@@ -35,7 +35,6 @@ class TableController extends Controller
     public function index(Request $request)
     {
         $request->session()->put('database', 'codehelper');
-        $request->session()->put('modelsFolder', '/var/www/html/app/Models/');
         return view('web.layout.sections.laravel.eloquent.crud_index');
     }
 
@@ -116,7 +115,9 @@ class TableController extends Controller
 
             // Search model
             $modelFile = $this->getModel($request->session()->get('modelsFolder'), $tableName);
-            $massAssignFields = $this->getMassAssignFields($modelFile, $tableName);
+            $massAssignFields = $modelFile
+                ? $this->getMassAssignFields($modelFile, $tableName)
+                : false;
 
             // Flag fillable fields
             if ($massAssignFields) {
