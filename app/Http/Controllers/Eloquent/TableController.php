@@ -53,11 +53,22 @@ class TableController extends Controller
             'table' => $tableName,
             'insertjson' => $request->insertjson,
             'operations' => [
+                '--- Eloquent Model ---',
                 'Insert',
                 'Create',
                 'Update',
                 'Mass Updates',
                 'Update or Create',
+                'Delete',
+                'Delete by Primary Key',
+                '--- Query Builder ---',
+                'Query Insert',
+                'Insert or Ignore',
+                'Insert Get Id',
+                'Query Update',
+                'Update or Insert',
+                'Query Delete'
+
             ],
         ];
         // Try to get table information
@@ -77,11 +88,13 @@ class TableController extends Controller
                     'Select' => [
                         'type' => 'checkbox',
                         'value' => $field->Null == 'YES' ? false : true,
-                        'attributes' => [
-                            'field' => $field->Field
-                        ]
+                        'name' => 'chk-' . $field->Field
                     ],
-                    'Field' => $field->Field,
+                    'Field' => [
+                        'type' => 'span',
+                        'class' => 'field',
+                        'value' => $field->Field,
+                    ],
                     'Data Type' => $field->Type,
                     'Null' => $field->Null,
                     'Fillable' => 'NO',
@@ -131,6 +144,7 @@ class TableController extends Controller
             $viewParams['rows'] = $fieldList;
             $viewParams['model'] = [
                 'file' => $modelFile,
+                'name' => basename($modelFile, '.php'),
                 'massAssignFound' => $massAssignFields ? true : false,
             ];
         } catch (\Exception $ex) {
@@ -180,7 +194,7 @@ class TableController extends Controller
                     } else {
                         // Get file content and search for $table property
                         $contents = file_get_contents($dir->getRealPath());
-                        if (strpos($contents, "'".$table."'") !== false) {
+                        if (strpos($contents, "'" . $table . "'") !== false) {
                             return $dir->getRealPath();
                         }
                     }

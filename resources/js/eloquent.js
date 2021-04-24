@@ -10,30 +10,67 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function buildCode() {
-    const selectedFields = Array.prototype.filter
-        .call(document.getElementsByName("chk-select"), (chk) => chk.checked)
-        .map((chk) => chk.attributes["data-field"].value);
     const insertVariable = document.getElementById("insertVariable").value;
     const operationType = document.getElementsByName("operationType")[0].value;
-    const tableName = document.getElementById("table").value;
-    const modelName = tableName.charAt(0).toUpperCase() + tableName.slice(1);
 
     let code = "";
     switch (operationType) {
         case "Insert":
-            code = updateCode(selectedFields, insertVariable, modelName, true);
+            code = updateCode(insertVariable, true);
             break;
         case "Create":
-            code = createCode(selectedFields, insertVariable, modelName);
+            code = `${getModelFunction(
+                "create",
+                true
+            )}([\n${getFieldsAssigment().join(",\n")}\n]);`;
             break;
         case "Update":
-            code = updateCode(selectedFields, insertVariable, modelName);
+            code = updateCode(insertVariable);
             break;
         case "Mass Updates":
-            code = massUpdateCode(selectedFields, modelName);
+            code = massUpdateCode();
             break;
-        case "Update or Insert":
-            code = updateOrInsert(selectedFields, tableName);
+        case "Update or Create":
+            code = `${getModelFunction(
+                "updateOrCreate"
+            )}(\n\t\t[\n\t\t${getFieldsAssigment(true, true).join(
+                ",\n\t\t"
+            )}\n\t\t],\n\t\t[\n\t\t${getFieldsAssigment().join(
+                ",\n\t\t"
+            )}\n\t\t]\n\t);`;
+            break;
+        case "Delete":
+            code = `${getModelFunction(
+                "findOrFail($id);",
+                true
+            )}\n${insertVariable}->delete();`;
+            break;
+        case "Delete by Primary Key":
+            code = getModelFunction("destroy($id);");
+            break;
+        case "Query Insert":
+            code = `${getDbFunction("insert")}([\n\t${getFieldsAssigment().join(
+                ",\n\t"
+            )}\n]);`;
+            break;
+        case "Insert or Ignore":
+            code = `${getDbFunction(
+                "insertOrIgnore"
+            )}([\n\t${getFieldsAssigment().join(",\n\t")}\n]);`;
+            break;
+        case "Insert Get Id":
+            code = `$newId = ${getDbFunction(
+                "insertGetId"
+            )}([\n\t${getFieldsAssigment().join(",\n\t")}\n]);`;
+            break;
+        case "Query Update":
+            code = `$affectedRows = ${getDbFunction(
+                "where"
+            )}${getFieldsAssigment(false, true, true).join(
+                "\n\t->where"
+            )}\n\t->update(\n\t\t[\n\t\t${getFieldsAssigment().join(
+                ",\n\t\t"
+            )}\n\t\t]\n\t);`;
             break;
         default:
             break;
@@ -41,6 +78,18 @@ function buildCode() {
     document.getElementById("insert-code").value = code;
 }
 
+function getDbFunction(method) {
+    const tableName = document.getElementById("table").value;
+
+    return `DB::table('${tableName}')->${method}`;
+}
+
+/**
+ * Get mapped value from the object variable name or empty string if not defined
+ *
+ * @param {string} field The field name to get the mapped value
+ * @returns {string}
+ */
 function getMappedValue(field) {
     const objectVariable = document.getElementById("objectVariable").value;
     return document.getElementsByName("mappedvalue-" + field)[0].value
@@ -50,72 +99,83 @@ function getMappedValue(field) {
         : `''`;
 }
 
-function updateCode(
-    selectedFields,
-    insertVariable,
-    modelName,
-    isInsert = false
+/**
+ * Build string to declare the model and the first function to use (Ex. Model::function)
+ *
+ * @param {string} method The method to call for the model
+ * @param {boolean} isReturn Should it assign it to a variable? (Default: false)
+ * @param {boolean} isNew Specifies if it should return a new instance of the model (Default: false)
+ * @returns {string}
+ */
+function getModelFunction(method, isReturn = false, isNew = false) {
+    const modelName = document.getElementById("modelName").value;
+    const insertVariable = document.getElementById("insertVariable").value;
+    return (
+        (isReturn ? `${insertVariable} = ` : "") +
+        (isNew ? ` new ${modelName}();` : `${modelName}::${method}`)
+    );
+}
+
+/**
+ * Get fields assignment
+ *
+ * @param {boolean} isArrayFormat
+ * @returns {Array}
+ */
+function getFieldsAssigment(
+    isArrayFormat = true,
+    isFilter = false,
+    isWhereFilter = false
 ) {
-    let insertCode = isInsert
-        ? insertVariable + " = new " + modelName + "();\n"
-        : `${insertVariable} = ${modelName}::findOrFail($id);\n`;
-
-    insertCode += selectedFields
-        .map(
-            (field) => `${insertVariable}->${field} = ${getMappedValue(field)}`
+    const selectedFields = Array.prototype.filter
+        .call(
+            document.getElementsByClassName("field"),
+            ({ innerText }) =>
+                document.getElementsByName("chk-" + innerText)[0].checked &&
+                document.getElementsByName("filter-" + innerText)[0].value
+                    .length == isFilter
         )
-        .join(";\n");
+        .map((field) => field.innerText);
 
-    insertCode += `\n${insertVariable}->save();`;
-    return insertCode;
-}
-
-function createCode(selectedFields, insertVariable, modelName) {
-    let insertCode = `${insertVariable} = ${modelName}::create([\n`;
-    selectedFields.forEach((field) => {
-        insertCode += `\t'${field}' => ${getMappedValue(field)};\n`;
-    });
-    insertCode += "]);";
-    return insertCode;
-}
-
-function massUpdateCode(selectedFields, modelName) {
-    // Create conditions and update block
-    let conditions = "";
-    let updates = "";
-    selectedFields.forEach((field) => {
-        if (document.getElementsByName("filter-" + field)[0].value) {
-            // Add -> to where methods after the first one
-            if (conditions) {
-                conditions += "\t->";
-            }
-            conditions +=
-                `where('${field}', '` +
-                document.getElementsByName("filter-" + field)[0].value +
-                `', ${getMappedValue(field)}->)\n`;
-        } else {
-            updates += `\t\t\t'${field}' => ${getMappedValue(field)},\n`;
+    if (isWhereFilter) {
+        if (!selectedFields.length) {
+            return ["('', '')"];
         }
-    });
-
-    if (!conditions) {
-        conditions = `where('', '')\n`;
+        return selectedFields.map(
+            (field) =>
+                `('${field}', '${
+                    document.getElementsByName("filter-" + field)[0].value
+                }', ${getMappedValue(field)})`
+        );
     }
 
-    return `${modelName}::${conditions}\t->update(\n\t\t[\n${updates}\t\t]\n\t);`;
+    return selectedFields.map((field) =>
+        isArrayFormat
+            ? `\t'${field}' => ${getMappedValue(field)}`
+            : `${
+                  document.getElementById("insertVariable").value
+              }->${field} = ${getMappedValue(field)}`
+    );
 }
 
-function updateOrInsert(selectedFields, tableName) {
-    // Create conditions and update block
-    let conditions = [];
-    let updates = "";
-    selectedFields.forEach((field) => {
-        if (document.getElementsByName("filter-" + field)[0].value) {
-            conditions.push(`\t\t\t'${field}' => ${getMappedValue(field)}`);
-        } else {
-            updates += `\t\t\t'${field}' => ${getMappedValue(field)},\n`;
-        }
-    });
+function updateCode(insertVariable, isInsert = false) {
+    return `${getModelFunction(
+        "findOrFail($id);",
+        true,
+        isInsert
+    )}\n${getFieldsAssigment(false).join(";\n")};\n${insertVariable}->save();`;
+}
 
-    return `DB::table('${tableName}')\n\t->updateOrCreate(\n\t\t[\n${conditions}\n\t\t],\n\t\t[\n${updates}\t\t]\n\t);`;
+function massUpdateCode() {
+    // Create conditions and update block
+    let conditions = getFieldsAssigment(true, true, true);
+    if (!conditions.length) {
+        conditions.push(`('', '')\n`);
+    }
+
+    return `${getModelFunction("where")}${conditions.join(
+        "\n\t->where"
+    )}\n\t->update(\n\t\t[\n\t\t${getFieldsAssigment(true).join(
+        ",\n\t\t"
+    )}\n\t\t]\n\t);`;
 }
