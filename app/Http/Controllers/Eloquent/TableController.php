@@ -223,7 +223,7 @@ class TableController extends Controller
             // Make sure this is the right model before trying to pull the information
             if (
                 strpos($modelContent, 'class ' . $tableName . ' extends Model') !== false
-                || strpos($modelContent, '') !== false
+                || strpos($modelContent, "'" . $tableName . "'") !== false
             ) {
                 // Search for $fillable variable
                 $fillableInfo = strpos($modelContent, '$fillable');
