@@ -108,7 +108,8 @@ class TableController extends Controller
                         'type' => 'select',
                         'value' => '',
                         'options' => [
-                            '', '=', '<', '>', '<=', '>=', '<>', '!=', 'LIKE', 'NOT LIKE', 'BETWEEN', 'ILIKE'
+                            '', '=', '<', '>', '<=', '>=', '<>', '!=', 'LIKE', 'NOT LIKE',
+                            'BETWEEN', 'ILIKE'
                         ],
                         'name' => 'filter-' . $field->Field,
                     ],
