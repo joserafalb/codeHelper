@@ -68,8 +68,15 @@
                 <input type="text" id="objectVariable" value="$object" />
             </div>
         </div>
+        @include('web.components.toggle', [
+            'label' => 'Tinker mode',
+            'name' => 'tinkerMode'
+        ])
+        @include('web.components.toggle', [
+            'label' => 'Full named class',
+            'name' => 'fullNameClass'
+        ])
         <button id="refreshCode">Refresh Code</button>
-
         @include('web.components.textarea', [
         'label' => 'Insert Output',
         'name' => 'insert-code',

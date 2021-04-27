@@ -164,7 +164,7 @@ class TableController extends Controller
     }
 
     /**
-     * Undocumented function
+     * Return the full path of the model if found or null if not found
      *
      * @param string $folder The folder to search the model
      * @param string $table  The table name to search the in the model

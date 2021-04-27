@@ -72,6 +72,10 @@ function buildCode() {
       break;
   }
 
+  if (document.getElementsByName('tinkerMode')[0].checked) {
+    code = document.getElementById('insert-code').value.replace(/(\r\n|\n|\r|\t)/gm, "").replace(/(;)/gm, ";\n").trim();
+  }
+
   document.getElementById("insert-code").value = code;
 }
 
@@ -105,6 +109,11 @@ function getModelFunction(method) {
   var isReturn = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
   var isNew = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
   var modelName = document.getElementById("modelName").value;
+
+  if (document.getElementsByName('fullNameClass')[0].checked) {
+    modelName = "App\\Models\\".concat(modelName);
+  }
+
   var insertVariable = document.getElementById("insertVariable").value;
   return (isReturn ? "".concat(insertVariable, " = ") : "") + (isNew ? " new ".concat(modelName, "();") : "".concat(modelName, "::").concat(method));
 }

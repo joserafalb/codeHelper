@@ -81,6 +81,14 @@ function buildCode() {
         default:
             break;
     }
+
+    if (document.getElementsByName('tinkerMode')[0].checked) {
+        code = document.getElementById('insert-code').value
+        .replace(/(\r\n|\n|\r|\t)/gm, "")
+        .replace(/(;)/gm,";\n")
+        .trim();
+    }
+
     document.getElementById("insert-code").value = code;
 }
 
@@ -114,7 +122,12 @@ function getMappedValue(field) {
  * @returns {string}
  */
 function getModelFunction(method, isReturn = false, isNew = false) {
-    const modelName = document.getElementById("modelName").value;
+    let modelName = document.getElementById("modelName").value;
+
+    if (document.getElementsByName('fullNameClass')[0].checked) {
+        modelName = `App\\Models\\${modelName}`;
+    }
+
     const insertVariable = document.getElementById("insertVariable").value;
     return (
         (isReturn ? `${insertVariable} = ` : "") +
