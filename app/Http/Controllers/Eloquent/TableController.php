@@ -188,10 +188,8 @@ class TableController extends Controller
                 if ($fileInfo->isDot()) {
                     continue;
                 }
-
-                if (is_dir($folder . $dir)) {
-                    $modelFound = $this->getModel($folder . $dir, $table);
-
+                if (is_dir($dir->getRealPath())) {
+                    $modelFound = $this->getModel($dir->getRealPath(), $table);
                     if ($modelFound) {
                         return $modelFound;
                     }
