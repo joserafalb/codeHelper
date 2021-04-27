@@ -72,6 +72,12 @@ function buildCode() {
                 ",\n\t\t"
             )}\n\t\t]\n\t);`;
             break;
+        case "Update or Insert":
+            code = `${getDbFunction('updateOrInsert')}(\n\t[\n\t${getFieldsAssigment(true, true).join(',\n\t')}\n\t],\n\t[\n\t${getFieldsAssigment(true).join(',\n\t')}\n\t]\n)`
+            break;
+        case "Query Delete":
+            code = `${getDbFunction('where')}${getFieldsAssigment(false, true, true).join('\n\t->where')}\n\t->delete();`
+            break;
         default:
             break;
     }

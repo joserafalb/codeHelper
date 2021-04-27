@@ -60,6 +60,14 @@ function buildCode() {
       code = "$affectedRows = ".concat(getDbFunction("where")).concat(getFieldsAssigment(false, true, true).join("\n\t->where"), "\n\t->update(\n\t\t[\n\t\t").concat(getFieldsAssigment().join(",\n\t\t"), "\n\t\t]\n\t);");
       break;
 
+    case "Update or Insert":
+      code = "".concat(getDbFunction('updateOrInsert'), "(\n\t[\n\t").concat(getFieldsAssigment(true, true).join(',\n\t'), "\n\t],\n\t[\n\t").concat(getFieldsAssigment(true).join(',\n\t'), "\n\t]\n)");
+      break;
+
+    case "Query Delete":
+      code = "".concat(getDbFunction('where')).concat(getFieldsAssigment(false, true, true).join('\n\t->where'), "\n\t->delete();");
+      break;
+
     default:
       break;
   }

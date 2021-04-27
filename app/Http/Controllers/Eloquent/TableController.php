@@ -84,10 +84,17 @@ class TableController extends Controller
                     continue;
                 }
 
+                $selectChk = false;
+                if (isset($request->{'chk-' . $field->Field})) {
+                    $selectChk = true;
+                } elseif ($field->Null !== 'YES') {
+                    $selectChk = true;
+                }
+
                 $fieldList[] = [
                     'Select' => [
                         'type' => 'checkbox',
-                        'value' => $field->Null == 'YES' ? false : true,
+                        'value' => $selectChk,
                         'name' => 'chk-' . $field->Field
                     ],
                     'Field' => [
