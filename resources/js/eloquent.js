@@ -125,7 +125,7 @@ function getModelFunction(method, isReturn = false, isNew = false) {
     let modelName = document.getElementById("modelName").value;
 
     if (document.getElementsByName('fullNameClass')[0].checked) {
-        modelName = `App\\Models\\${modelName}`;
+        modelName = `${document.getElementById('modelNamespace').value}\\${modelName}`;
     }
 
     const insertVariable = document.getElementById("insertVariable").value;

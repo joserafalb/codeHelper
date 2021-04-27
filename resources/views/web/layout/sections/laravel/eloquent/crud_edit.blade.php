@@ -11,6 +11,7 @@
     Eloquent CRUD Operations
 </div>
 <input type="hidden" id="modelName" value="{{ $model['name'] }}"/>
+<input type="hidden" id="modelNamespace" value="{{ $model['nameSpace'] }}" />
 <div class="grid grid-cols-2 gap-3">
     @include('web.layout.sections.laravel.eloquent.crud_form')
     <div>

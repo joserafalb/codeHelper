@@ -111,7 +111,7 @@ function getModelFunction(method) {
   var modelName = document.getElementById("modelName").value;
 
   if (document.getElementsByName('fullNameClass')[0].checked) {
-    modelName = "App\\Models\\".concat(modelName);
+    modelName = "".concat(document.getElementById('modelNamespace').value, "\\").concat(modelName);
   }
 
   var insertVariable = document.getElementById("insertVariable").value;

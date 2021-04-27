@@ -14,11 +14,12 @@
 
 namespace App\Http\Controllers\Eloquent;
 
-use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use DirectoryIterator;
 use Faker\Guesser\Name;
+use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
 
 /**
  * TableController class
@@ -136,9 +137,12 @@ class TableController extends Controller
 
             // Search model
             $modelFile = $this->getModel($request->session()->get('modelsFolder'), $tableName);
-            $massAssignFields = $modelFile
-                ? $this->getMassAssignFields($modelFile, $tableName)
-                : false;
+
+            $massAssignFields = false;
+            if ($modelFile) {
+                $modelInfo =  $this->getModelInfo($modelFile, $tableName);
+                $massAssignFields = $modelInfo['massAssignFields'];
+            }
 
             // Flag fillable fields
             if ($massAssignFields) {
@@ -154,6 +158,7 @@ class TableController extends Controller
                 'file' => $modelFile,
                 'name' => basename($modelFile, '.php'),
                 'massAssignFound' => $massAssignFields ? true : false,
+                'nameSpace' => $modelInfo['nameSpace'] ?? '',
             ];
         } catch (\Exception $ex) {
             $viewParams['error'] = $ex->getMessage();
@@ -220,7 +225,7 @@ class TableController extends Controller
      *
      * @return null|array
      */
-    private function getMassAssignFields(string $modelFile, string $tableName)
+    private function getModelInfo(string $modelFile, string $tableName)
     {
         $massAssignFields = null;
         if (file_exists($modelFile)) {
@@ -228,12 +233,14 @@ class TableController extends Controller
 
             // Make sure this is the right model before trying to pull the information
             if (
-                strpos($modelContent, 'class ' . $tableName . ' extends Model') !== false
+                strpos(Str::lower($modelContent), 'class ' . Str::lower($tableName) . ' extends model') !== false
                 || strpos($modelContent, "'" . $tableName . "'") !== false
             ) {
                 // Search for $fillable variable
                 $fillableInfo = strpos($modelContent, '$fillable');
                 $guardInfo = strpos($modelContent, '$guarded');
+                $nameSpace = Str::after($modelContent, 'namespace ');
+                $nameSpace = Str::before($nameSpace, ';');
 
                 $massAssignFields = null;
                 if ($fillableInfo !== false) {
@@ -248,7 +255,10 @@ class TableController extends Controller
                 }
             }
         }
-        return $massAssignFields;
+        return [
+            'massAssignFields' => $massAssignFields,
+            'nameSpace' => $nameSpace
+        ];
     }
 
     /**
