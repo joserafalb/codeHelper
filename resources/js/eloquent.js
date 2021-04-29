@@ -83,10 +83,7 @@ function buildCode() {
     }
 
     if (document.getElementsByName('tinkerMode')[0].checked) {
-        code = document.getElementById('insert-code').value
-        .replace(/(\r\n|\n|\r|\t)/gm, "")
-        .replace(/(;)/gm,";\n")
-        .trim();
+        code = code.replace(/(\r\n|\n|\r|\t)/gm, "").replace(/(;)/gm,";\n").trim();
     }
 
     document.getElementById("insert-code").value = code;
