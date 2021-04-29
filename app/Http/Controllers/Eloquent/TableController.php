@@ -15,7 +15,6 @@
 namespace App\Http\Controllers\Eloquent;
 
 use DirectoryIterator;
-use Faker\Guesser\Name;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +25,24 @@ use App\Http\Controllers\Controller;
  */
 class TableController extends Controller
 {
+    const OPERATIONS = [
+        '--- Eloquent Model ---',
+        'Insert',
+        'Create',
+        'Update',
+        'Mass Updates',
+        'Update or Create',
+        'Delete',
+        'Delete by Primary Key',
+        '--- Query Builder ---',
+        'Query Insert',
+        'Insert or Ignore',
+        'Insert Get Id',
+        'Query Update',
+        'Update or Insert',
+        'Query Delete'
+    ];
+
     /**
      * Load eloquent crud view
      *
@@ -39,6 +56,7 @@ class TableController extends Controller
         return view('web.layout.sections.laravel.eloquent.crud_index');
     }
 
+
     /**
      * Get's table and model information and load view
      *
@@ -50,116 +68,72 @@ class TableController extends Controller
     {
         $tableName = $request->table;
 
+        // Search model
+        $modelFile = $this->getModel($request->session()->get('modelsFolder'), $tableName);
+        $massAssignFields = [];
+        if ($modelFile) {
+            $modelInfo =  $this->getModelInfo($modelFile, $tableName);
+            $massAssignFields = $modelInfo['massAssignFields'];
+        }
+
         $viewParams = [
             'table' => $tableName,
             'insertjson' => $request->insertjson,
-            'operations' => [
-                '--- Eloquent Model ---',
-                'Insert',
-                'Create',
-                'Update',
-                'Mass Updates',
-                'Update or Create',
-                'Delete',
-                'Delete by Primary Key',
-                '--- Query Builder ---',
-                'Query Insert',
-                'Insert or Ignore',
-                'Insert Get Id',
-                'Query Update',
-                'Update or Insert',
-                'Query Delete'
-
-            ],
+            'operations' => self::OPERATIONS,
+            'model' => [
+                'file' => $modelFile,
+                'name' => basename($modelFile, '.php'),
+                'massAssignFound' => count($massAssignFields) > 0,
+                'nameSpace' => $modelInfo['nameSpace'] ?? '',
+            ]
         ];
+
         // Try to get table information
         try {
             // Get table fields
-            $fields = DB::select(DB::raw('DESCRIBE ' . $tableName));
+            $fields = collect(DB::select(DB::raw('DESCRIBE ' . $tableName)));
             $insertData = json_decode($request->insertjson);
-            $fieldList = [];
-            $primaryKeys = [];
-            foreach ($fields as $field) {
-                if ($field->Key == 'PRI') {
-                    $primaryKeys[] = $field->Field;
-                    continue;
-                }
 
-                $selectChk = false;
-                if (isset($request->{'chk-' . $field->Field})) {
-                    $selectChk = true;
-                } elseif ($field->Null !== 'YES') {
-                    $selectChk = true;
-                }
-
-                $fieldList[] = [
-                    'Select' => [
-                        'type' => 'checkbox',
-                        'value' => $selectChk,
-                        'name' => 'chk-' . $field->Field
-                    ],
-                    'Field' => [
-                        'type' => 'span',
-                        'class' => 'field',
-                        'value' => $field->Field,
-                    ],
-                    'Data Type' => $field->Type,
-                    'Null' => $field->Null,
-                    'Fillable' => 'NO',
-                    'Mapped Value' => [
-                        'type' => 'select',
-                        'value' => isset($insertData->{$field->Field}) ? $field->Field : '',
-                        'options' => array_merge([''], array_keys((array)$insertData)),
-                        'name' => 'mappedvalue-' . $field->Field,
-                    ],
-                    'Filter' => [
-                        'type' => 'select',
-                        'value' => '',
-                        'options' => [
-                            '', '=', '<', '>', '<=', '>=', '<>', '!=', 'LIKE', 'NOT LIKE',
-                            'BETWEEN', 'ILIKE'
-                        ],
-                        'name' => 'filter-' . $field->Field,
-                    ],
-                ];
-            }
-
-            // Sort field list
-            usort(
-                $fieldList,
-                function ($a, $b) {
-                    if ($a['Field'] == $b['Field']) {
-                        return 0;
+            $viewParams['rows'] = $fields
+                ->map(
+                    function ($field) use ($insertData, $massAssignFields) {
+                        return [
+                            'Select' => [
+                                'type' => 'checkbox',
+                                'value' => ($field->Null !== 'YES'),
+                                'name' => 'chk-' . $field->Field
+                            ],
+                            'Field' => [
+                                'type' => 'span',
+                                'class' => 'field',
+                                'value' => $field->Field,
+                            ],
+                            'Data Type' => $field->Type,
+                            'Null' => $field->Null,
+                            'Fillable' => in_array($field->Field, $massAssignFields)
+                                ? 'YES'
+                                : 'NO',
+                            'Mapped Value' => [
+                                'type' => 'select',
+                                'value' => isset($insertData->{$field->Field})
+                                    ? $field->Field
+                                    : '',
+                                'options' => array_merge([''], array_keys((array)$insertData)),
+                                'name' => 'mappedvalue-' . $field->Field,
+                            ],
+                            'Filter' => [
+                                'type' => 'select',
+                                'value' => '',
+                                'options' => [
+                                    '', '=', '<', '>', '<=', '>=', '<>', '!=', 'LIKE',
+                                    'NOT LIKE', 'BETWEEN', 'ILIKE'
+                                ],
+                                'name' => 'filter-' . $field->Field,
+                            ],
+                        ];
                     }
-                    return $a['Field'] > $b['Field'] ? 1 : -1;
-                }
-            );
-
-            // Search model
-            $modelFile = $this->getModel($request->session()->get('modelsFolder'), $tableName);
-
-            $massAssignFields = false;
-            if ($modelFile) {
-                $modelInfo =  $this->getModelInfo($modelFile, $tableName);
-                $massAssignFields = $modelInfo['massAssignFields'];
-            }
-
-            // Flag fillable fields
-            if ($massAssignFields) {
-                foreach ($fieldList as $key => $field) {
-                    if (in_array($field['Field'], $massAssignFields)) {
-                        $fieldList[$key]['Fillable'] = 'YES';
-                    }
-                }
-            }
-
-            $viewParams['rows'] = $fieldList;
-            $viewParams['model'] = [
-                'file' => $modelFile,
-                'name' => basename($modelFile, '.php'),
-                'massAssignFound' => $massAssignFields ? true : false,
-                'nameSpace' => $modelInfo['nameSpace'] ?? '',
-            ];
+                )
+                ->sortBy('Field');
         } catch (\Exception $ex) {
             $viewParams['error'] = $ex->getMessage();
             return view('web.layout.sections.laravel.eloquent.crud_index', $viewParams);
@@ -223,11 +197,11 @@ class TableController extends Controller
      * @param string $modelFile The path to the model file
      * @param string $tableName The table name
      *
-     * @return null|array
+     * @return array
      */
     private function getModelInfo(string $modelFile, string $tableName)
     {
-        $massAssignFields = null;
+        $massAssignFields = [];
         if (file_exists($modelFile)) {
             $modelContent = file_get_contents($modelFile);
 
@@ -242,7 +216,6 @@ class TableController extends Controller
                 $nameSpace = Str::after($modelContent, 'namespace ');
                 $nameSpace = Str::before($nameSpace, ';');
 
-                $massAssignFields = null;
                 if ($fillableInfo !== false) {
                     // Get the array of fillable fields
                     $fillableInfo = substr($modelContent, $fillableInfo);
